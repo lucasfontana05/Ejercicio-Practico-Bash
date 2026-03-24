@@ -22,10 +22,14 @@ if [[ $1 = "-d" ]]; then
 	fi
 fi
 
-echo "Para que el script funcione correctamente, se recomienda definir la variable de ambiente FILENAME antes de usar las opciones"
-echo " "
-
 while true; do # Al poner todo dentro de un bucle, despues de seleccionar una opción va a regresar al menú en lugar de terminar el script
+
+if [[ $FILENAME = "" ]]; then # si no existe FILENAME, el bucle no se ejecuta
+	echo "Por favor, defina la variable de ambiente FILENAME antes de continuar"
+	break
+fi
+
+	echo " "
 	echo "---------- [ MENU ] ----------"
 	echo " "
 	echo "Seleccione una opción"
@@ -55,62 +59,78 @@ while true; do # Al poner todo dentro de un bucle, despues de seleccionar una op
 			read
 			;;
 		2)
-			# Primero compruebo la existencia de $FILENAME.txt
-			if [ ! -f ~/EPNro1/salida/$FILENAME.txt ]; then # si no existe, crea $FILENAME.txt
-				echo > ~/EPNro1/salida/$FILENAME.txt
-				echo "Se ha creado el archivo $FILENAME.txt en el directorio salida. Continuando.."
+			if [ ! -d ~/EPNro1 ]; then # verifico si existe EPNro1
+				echo "ERROR: No existe el directorio EPNro1. Por favor crealo usando la opción [1] antes de volver a intentar."
 			else
-				echo "El archivo $FILENAME.txt ya existe en el directorio. Continuando.."
+				# Primero compruebo la existencia de $FILENAME.txt
+				if [ ! -f ~/EPNro1/salida/$FILENAME.txt ]; then # si no existe, crea $FILENAME.txt
+					echo > ~/EPNro1/salida/$FILENAME.txt
+					echo "Se ha creado el archivo $FILENAME.txt en el directorio salida. Continuando.."
+				else
+					echo "El archivo $FILENAME.txt ya existe en el directorio. Continuando.."
+				fi
+
+				# Copio el script consolidar.sh a la carpeta EPNro1
+				DIR_SCRIPT=$(dirname "$0") # busca donde esta localizado el script
+				cp $DIR_SCRIPT/consolidar.sh ~/EPNro1
+
+				# ejecuto el script en background
+				bash ~/EPNro1/consolidar.sh &
+				CONSOLIDAR_ID=$! # obtengo la ID del proceso en background que se acaba de ejecutar y lo guardo en una variable que exporto para luego volver a acceder a ella en caso de querer matar el proceso
+				echo $CONSOLIDAR_ID > ~/EPNro1/.CONSOLIDAR_ID # creo un archivo invisible donde guardo el ID del proceso de consolidar para poder matarlo al usar -d
+				echo "El script ha comenzado a ejecutarse en background"
 			fi
-
-			# Copio el script consolidar.sh a la carpeta EPNro1
-			DIR_SCRIPT=$(dirname "$0") # busca donde esta localizado el script
-			cp $DIR_SCRIPT/consolidar.sh ~/EPNro1
-
-			# ejecuto el script en background
-			bash ~/EPNro1/consolidar.sh &
-			CONSOLIDAR_ID=$! # obtengo la ID del proceso en background que se acaba de ejecutar y lo guardo en una variable que exporto para luego volver a acceder a ella en caso de querer matar el proceso
-			echo $CONSOLIDAR_ID > ~/EPNro1/.CONSOLIDAR_ID # creo un archivo invisible donde guardo el ID del proceso de consolidar para poder matarlo al usar -d
-			echo "El script ha comenzado a ejecutarse en background"
-
 			echo "Presione ENTER para volver al menú"
 			read
 			;;
 		3)
-			# Ordena los items por número de padrón
-			if [ -f ~/EPNro1/salida/$FILENAME.txt ]; then
-				sort -n ~/EPNro1/salida/$FILENAME.txt # como el número de padron va primero, se ordenan por número así nomas.
+			if [ ! -d ~/EPNro1 ]; then # verifico si existe EPNro1
+				echo "ERROR: No existe el directorio EPNro1. Por favor crealo usando la opción [1] antes de volver a intentar."
 			else
-				echo "ERROR: El archivo $FILENAME.txt no existe."
+				# Ordena los items por número de padrón
+				if [ -f ~/EPNro1/salida/$FILENAME.txt ]; then
+					sort -n ~/EPNro1/salida/$FILENAME.txt # como el número de padron va primero, se ordenan por número así nomas.
+				else
+					echo "ERROR: El archivo $FILENAME.txt no existe."
+				fi
 			fi
-
 			echo "Presione ENTER para volver al menú"
 			read
 			;;
 		4)
-			# Ordena por las 10 notas mas altas
-			if [ -f ~/EPNro1/salida/$FILENAME.txt ]; then
-				awk '{print $NF, $0}' ~/EPNro1/salida/$FILENAME.txt | sort -n -r | cut -f2- -d' ' | head -n 10 # agarra la ultima fila (la de las notas) y la copia delante, luego las ordena de mayor a menor y por ultimo saca la primera fila para que quede ordenado tal como se pide
+			if [ ! -d ~/EPNro1 ]; then # verifico si existe EPNro1
+				echo "ERROR: No existe el directorio EPNro1. Por favor crealo usando la opción [1] antes de volver a intentar."
 			else
-				echo "ERROR: El archivo $FILENAME.txt no existe."
+				# Ordena por las 10 notas mas altas
+				if [ -f ~/EPNro1/salida/$FILENAME.txt ]; then
+					awk '{print $NF, $0}' ~/EPNro1/salida/$FILENAME.txt | sort -n -r | cut -f2- -d' ' | head -n 10 # agarra la ultima fila (la de las notas) y la copia delante, luego las ordena de mayor a menor y por ultimo saca la primera fila para que quede ordenado tal como se pide
+				else
+					echo "ERROR: El archivo $FILENAME.txt no existe."
+				fi
 			fi
 
 			echo "Presione ENTER para volver al menú"
 			read
 			;;
 		5)
-			# Solicita un numero de padron para buscarlo
-			echo -n "Ingrese un número de padrón: "
-			read PADRON
-
-			# Busca el padrón en el archivo
-			OUTPUT=$(grep -w $PADRON ~/EPNro1/salida/$FILENAME.txt) # Busco solo la serie de numeros dada y la pongo en una variable para poder printear un echo en caso de no existir el numero
-			if [ -n "$OUTPUT" ]; then
-				echo $OUTPUT
+			if [ ! -d ~/EPNro1 ]; then # verifico si existe EPNro1
+				echo "ERROR: No existe el directorio EPNro1. Por favor crealo usando la opción [1] antes de volver a intentar."
 			else
-				echo "El número de padrón ingresado no existe en $FILENAME.txt"
+				# Solicita un numero de padron para buscarlo
+				echo -n "Ingrese un número de padrón: "
+				read PADRON
+				if [[ $PADRON = "" ]]; then # si no se ingresa nada tira un error
+					echo "ERROR: No se ha ingresado ningún número"
+				else
+					# Busca el padrón en el archivo
+					OUTPUT=$(grep -w $PADRON ~/EPNro1/salida/$FILENAME.txt) # Busco solo la serie de numeros dada y la pongo en una variable para poder printear un echo en caso de no existir el numero
+					if [ -n "$OUTPUT" ]; then
+						echo $OUTPUT
+					else
+						echo "El número de padrón ingresado no existe en $FILENAME.txt"
+					fi
+				fi
 			fi
-
 			echo "Presione ENTER para volver al menú"
 			read
 			;;
